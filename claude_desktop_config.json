@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "indian-stocks": {
+      "command": "python",
+      "args": ["/path/to/your/project/mcp/groq_mcp_server.py"]
+    }
+  }
+}

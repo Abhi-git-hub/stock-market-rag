@@ -1,0 +1,186 @@
+{
+  "name": "Stock Market RAG Bot - WORKING",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "stock-query",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "stock-rag-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8080/query",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ question: $json.body.question }) }}",
+        "options": {}
+      },
+      "id": "b2c3d4e5-f6g7-8901-bcde-f12345678901",
+      "name": "Query Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "c3d4e5f6-g7h8-9012-cdef-123456789012",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      },
+      "id": "d4e5f6g7-h8i9-0123-defg-234567890123",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        520
+      ],
+      "webhookId": "telegram-stock-bot"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8080/query",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ question: $json.message.text }) }}",
+        "options": {}
+      },
+      "id": "e5f6g7h8-i9j0-1234-efgh-345678901234",
+      "name": "Query Backend from Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "=\ud83d\udcca *Stock Market Analysis*\\n\\n{{ $json.answer }}\\n\\n\ud83d\udcc8 *Sources:* {{ $json.sources ? $json.sources.join(', ') : 'N/A' }}\\n\ud83e\udd16 *Model:* {{ $json.model }}\\n\ud83d\udd50 {{ $json.timestamp }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "f6g7h8i9-j0k1-2345-fghi-456789012345",
+      "name": "Send Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        680,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Store chat ID from Telegram Trigger for the next node\nconst item = $input.item.json;\n\nreturn {\n  json: {\n    chatId: item.message.chat.id,\n    answer: item.answer,\n    sources: item.sources,\n    timestamp: item.timestamp,\n    model: item.model\n  }\n};"
+      },
+      "id": "g7h8i9j0-k1l2-3456-ghij-567890123456",
+      "name": "Prepare Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        570,
+        520
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Query Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Backend": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Query Backend from Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Backend from Telegram": {
+      "main": [
+        [
+          {
+            "node": "Prepare Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Response": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-11-26T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,75 @@
+{
+  "name": "Stock Email Report - Fixed",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "1",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Use n8n's built-in HTTP helper\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'http://localhost:8080/query',\n  headers: {\n    'Content-Type': 'application/json'\n  },\n  body: {\n    question: 'Provide a detailed summary of today\\'s Indian stock market. Include top 3 gainers and top 3 losers with their percentage changes.'\n  },\n  json: true\n});\n\n// Format email\nconst emailBody = `\n📈 INDIAN STOCK MARKET UPDATE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${response.answer}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📊 Data Sources: ${response.sources.join(', ')}\n🤖 AI Model: ${response.model}\n🕐 Generated: ${new Date().toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nThis is an automated report powered by Groq AI + Flask\n`;\n\nreturn [{\n  json: {\n    subject: `📈 Stock Market Update - ${new Date().toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'})}`,\n    body: emailBody,\n    rawData: response\n  }\n}];"
+      },
+      "id": "2",
+      "name": "Fetch & Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "number1abhiyadav@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}"
+      },
+      "id": "3",
+      "name": "Send Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [640, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Fetch & Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch & Format": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

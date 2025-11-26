@@ -1,0 +1,12 @@
+flask>=3.0.0
+flask-cors>=4.0.0
+groq>=0.4.1
+sentence-transformers>=5.0.0
+torch>=2.0.0
+streamlit>=1.28.0
+plotly>=5.17.0
+pandas>=2.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+yfinance>=0.2.32
+numpy>=1.24.0
