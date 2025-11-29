@@ -84,7 +84,7 @@ def fetch_stocks():
 
         for symbol in STOCKS:
             try:
-                ticker = yf.Ticker(f"{symbol}.BO")
+                ticker = yf.Ticker(f"{symbol}")
                 hist = ticker.history(period='1d')
                 info = ticker.info
 
