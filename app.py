@@ -287,7 +287,7 @@ with tab1:
         st.error("Backend offline. Start backend to see stocks.")
     else:
         try:
-            response = requests.get("f{backend_url}/stocks", timeout=5)
+            response = requests.get(f"{backend_url}/stocks", timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 stocks = data.get('stocks', [])
@@ -527,7 +527,7 @@ with tab2:
             with st.spinner("🧠 Analyzing..."):
                 try:
                     response = requests.post(
-                        "f{backend_url}/query",
+                        f"{backend_url}/query",
                         json={"question": question},
                         timeout=30
                     )
@@ -574,7 +574,7 @@ with tab4:
     st.markdown("### ⚠️ Volatility Alerts")
 
     try:
-        response = requests.get("f{backend_url}/alerts", timeout=5)
+        response = requests.get(f"{backend_url}/alerts", timeout=5)
         if response.status_code == 200:
             alerts = response.json().get('alerts', [])
 
