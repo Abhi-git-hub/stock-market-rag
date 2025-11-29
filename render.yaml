@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: stock-market-rag-backend
+    env: python
+    region: singapore
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements_backend.txt
+    startCommand: python backend_server.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: groqapi
+        sync: false
+
+  - type: web
+    name: stock-market-rag-frontend
+    env: python
+    region: singapore
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements_frontend.txt
+    startCommand: streamlit run app.py --server.port=10000 --server.address=0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: BACKEND_URL
+        value: https://stock-market-rag-backend.onrender.com
+        sync: false
