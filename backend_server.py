@@ -4,7 +4,7 @@ from groq import Groq
 from sentence_transformers import SentenceTransformer
 import yfinance as yf
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 from dotenv import load_dotenv
 import threading
@@ -24,91 +24,46 @@ embedder = SentenceTransformer('all-MiniLM-L6-v2')
 stock_data = []
 embeddings_store = []
 
-# INDIAN STOCKS - Using correct yfinance format (NSE symbols)
-# These WILL work with yfinance
-STOCKS = {
+# EXPANDED STOCK UNIVERSE - 50+ Major Indian Stocks
+# Nifty 50 companies + High volume stocks across sectors
+STOCKS = [
     # Banking & Financial Services (10)
-    'HDFCBANK.NS': 'HDFC Bank',
-    'ICICIBANK.NS': 'ICICI Bank',
-    'KOTAKBANK.NS': 'Kotak Bank',
-    'AXISBANK.NS': 'Axis Bank',
-    'SBIN.NS': 'State Bank of India',
-    'BAJFINANCE.NS': 'Bajaj Finance',
-    'BAJAJFINSV.NS': 'Bajaj Financial Services',
-    'HDFCLIFE.NS': 'HDFC Life Insurance',
-    'SBILIFE.NS': 'SBI Life Insurance',
-    'ICICIGI.NS': 'ICICI General Insurance',
+    'HDFCBANK', 'ICICIBANK', 'KOTAKBANK', 'AXISBANK', 'SBIN',
+    'BAJFINANCE', 'BAJAJFINSV', 'HDFCLIFE', 'SBILIFE', 'ICICIGI',
 
     # IT & Technology (8)
-    'TCS.NS': 'Tata Consultancy Services',
-    'INFY.NS': 'Infosys Limited',
-    'WIPRO.NS': 'Wipro Limited',
-    'HCLTECH.NS': 'HCL Technologies',
-    'TECHM.NS': 'Tech Mahindra',
-    'LTIM.NS': 'LTIMindtree',
-    'PERSISTENT.NS': 'Persistent Systems',
-    'COFORGE.NS': 'Coforge',
+    'TCS', 'INFY', 'WIPRO', 'HCLTECH', 'TECHM',
+    'LTIM', 'PERSISTENT', 'COFORGE',
 
     # Energy & Oil/Gas (5)
-    'RELIANCE.NS': 'Reliance Industries',
-    'ONGC.NS': 'Oil and Natural Gas Corporation',
-    'POWERGRID.NS': 'Power Grid Corporation',
-    'NTPC.NS': 'NTPC Limited',
-    'COALINDIA.NS': 'Coal India Limited',
+    'RELIANCE', 'ONGC', 'POWERGRID', 'NTPC', 'COALINDIA',
 
     # FMCG & Consumer (7)
-    'HINDUNILVR.NS': 'Hindustan Unilever',
-    'ITC.NS': 'ITC Limited',
-    'NESTLEIND.NS': 'Nestlé India',
-    'BRITANNIA.NS': 'Britannia Industries',
-    'DABUR.NS': 'Dabur India',
-    'MARICO.NS': 'Marico Limited',
-    'GODREJCP.NS': 'Godrej Consumer Products',
+    'HINDUNILVR', 'ITC', 'NESTLEIND', 'BRITANNIA', 'DABUR',
+    'MARICO', 'GODREJCP',
 
     # Auto & Auto Components (6)
-    'MARUTI.NS': 'Maruti Suzuki India',
-    'TATAMOTORS.NS': 'Tata Motors Limited',
-    'M&M.NS': 'Mahindra & Mahindra',
-    'BAJAJ-AUTO.NS': 'Bajaj Auto Limited',
-    'EICHERMOT.NS': 'Eicher Motors',
-    'HEROMOTOCO.NS': 'Hero MotoCorp',
+    'MARUTI', 'TATAMOTORS', 'M&M', 'BAJAJ-AUTO', 'EICHERMOT', 'HEROMOTOCO',
 
     # Pharma & Healthcare (5)
-    'SUNPHARMA.NS': 'Sun Pharmaceutical',
-    'DRREDDY.NS': 'Dr. Reddy's Laboratories',
-    'CIPLA.NS': 'Cipla Limited',
-    'DIVISLAB.NS': 'Divi's Laboratories',
-    'APOLLOHOSP.NS': 'Apollo Hospitals',
+    'SUNPHARMA', 'DRREDDY', 'CIPLA', 'DIVISLAB', 'APOLLOHOSP',
 
     # Telecom (2)
-    'BHARTIARTL.NS': 'Bharti Airtel Limited',
-    'INDUSINDBK.NS': 'IndusInd Bank',
+    'BHARTIARTL', 'INDUSINDBK',
 
     # Metals & Mining (4)
-    'TATASTEEL.NS': 'Tata Steel Limited',
-    'HINDALCO.NS': 'Hindalco Industries',
-    'JSWSTEEL.NS': 'JSW Steel Limited',
-    'VEDL.NS': 'Vedanta Limited',
+    'TATASTEEL', 'HINDALCO', 'JSWSTEEL', 'VEDL',
 
     # Infrastructure & Construction (5)
-    'LT.NS': 'Larsen & Toubro',
-    'ULTRACEMCO.NS': 'UltraTech Cement',
-    'GRASIM.NS': 'Grasim Industries',
-    'ADANIPORTS.NS': 'Adani Ports and Special Economic Zone',
-    'ADANIENT.NS': 'Adani Enterprises',
+    'LT', 'ULTRACEMCO', 'GRASIM', 'ADANIPORTS', 'ADANIENT',
 
     # Others - High Cap/Volume (8)
-    'ASIANPAINT.NS': 'Asian Paints',
-    'TITAN.NS': 'Titan Company Limited',
-    'BPCL.NS': 'Bharat Petroleum',
-    'HINDZINC.NS': 'Hindustan Zinc',
-    'INDIGO.NS': 'IndiGo Airlines',
-    'TATACONSUM.NS': 'Tata Consumer Products',
-    'PIDILITIND.NS': 'Pidilite Industries',
-    'SBICARD.NS': 'SBI Card and Payment Services'
-}
+    'ASIANPAINT', 'TITAN', 'BPCL', 'HINDZINC', 'INDIGO',
+    'TATACONSUM', 'PIDILITIND', 'SBICARD'
+]
 
-print(f"📊 Tracking {len(STOCKS)} stocks across 9 sectors")
+print(f"📊 Tracking {len(STOCKS)} stocks across multiple sectors")
+print(f"🏢 Sectors: Banking, IT, Energy, FMCG, Auto, Pharma, Telecom, Metals, Infrastructure")
 
 def fetch_stocks():
     """Background task: Fetch stock data every 60 seconds"""
@@ -127,89 +82,77 @@ def fetch_stocks():
         print(f"\n[Fetch #{fetch_count}] {datetime.now().strftime('%Y-%m-%d %H:%M:%S IST')}")
         print("-" * 70)
 
-        for symbol, name in STOCKS.items():
+        for symbol in STOCKS:
             try:
-                # Fetch with better error handling
-                ticker = yf.Ticker(symbol)
+                ticker = yf.Ticker(f"{symbol}.NS")
+                hist = ticker.history(period='1d')
+                info = ticker.info
 
-                # Get last 5 days of data for better analysis
-                end_date = datetime.now()
-                start_date = end_date - timedelta(days=5)
-                hist = ticker.history(start=start_date, end=end_date)
+                if not hist.empty:
+                    latest = hist.iloc[-1]
+                    current_price = float(latest['Close'])
+                    open_price = float(info.get('regularMarketOpen', latest['Open']))
+                    change = current_price - open_price
+                    change_percent = (change / open_price * 100) if open_price else 0
 
-                if hist.empty or len(hist) == 0:
-                    print(f"⏭️  {symbol:15} SKIPPED - No data available")
-                    failed += 1
-                    continue
+                    # Get additional info
+                    market_cap = info.get('marketCap', 0)
+                    pe_ratio = info.get('trailingPE', 'N/A')
+                    sector = info.get('sector', 'Unknown')
 
-                latest = hist.iloc[-1]
-                current_price = float(latest['Close'])
-
-                # Get previous close for change calculation
-                if len(hist) > 1:
-                    prev_close = float(hist.iloc[-2]['Close'])
-                else:
-                    prev_close = current_price
-
-                change = current_price - prev_close
-                change_percent = (change / prev_close * 100) if prev_close else 0
-
-                # High and Low for the day
-                high = float(latest['High'])
-                low = float(latest['Low'])
-                volume = int(latest['Volume'])
-
-                # Create rich context for RAG
-                text = f"""Stock: {symbol.replace('.NS', '')} ({name})
+                    # Rich context for RAG
+                    text = f"""Stock: {symbol}
+Sector: {sector}
 Current Price: ₹{current_price:.2f}
-Previous Close: ₹{prev_close:.2f}
 Change: ₹{change:.2f} ({change_percent:+.2f}%)
-Day High: ₹{high:.2f}
-Day Low: ₹{low:.2f}
-Volume: {volume:,}
+Day Range: ₹{float(latest['Low']):.2f} - ₹{float(latest['High']):.2f}
+Open: ₹{open_price:.2f}
+Volume: {int(latest['Volume']):,}
+Market Cap: ₹{market_cap:,.0f}
+PE Ratio: {pe_ratio}
+52 Week High: ₹{info.get('fiftyTwoWeekHigh', 0):.2f}
+52 Week Low: ₹{info.get('fiftyTwoWeekLow', 0):.2f}
 Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S IST')}"""
 
-                try:
                     embedding = embedder.encode(text).tolist()
-                except Exception as e:
-                    print(f"🔴 Embedding error for {symbol}: {str(e)[:30]}")
-                    failed += 1
-                    continue
 
-                stock_entry = {
-                    'symbol': symbol.replace('.NS', ''),
-                    'name': name,
-                    'price': current_price,
-                    'change': change,
-                    'change_percent': change_percent,
-                    'high': high,
-                    'low': low,
-                    'volume': volume,
-                    'timestamp': datetime.now().isoformat(),
-                    'text': text
-                }
+                    stock_entry = {
+                        'symbol': symbol,
+                        'sector': sector,
+                        'price': current_price,
+                        'change': change,
+                        'change_percent': change_percent,
+                        'open': open_price,
+                        'high': float(latest['High']),
+                        'low': float(latest['Low']),
+                        'volume': int(latest['Volume']),
+                        'market_cap': market_cap,
+                        'pe_ratio': pe_ratio if isinstance(pe_ratio, (int, float)) else None,
+                        'timestamp': datetime.now().isoformat(),
+                        'text': text
+                    }
 
-                stock_data.append(stock_entry)
-                embeddings_store.append(embedding)
+                    stock_data.append(stock_entry)
+                    embeddings_store.append(embedding)
 
-                # Keep last 1000 entries
-                if len(stock_data) > 1000:
-                    stock_data[:] = stock_data[-1000:]
-                    embeddings_store[:] = embeddings_store[-1000:]
+                    # Keep last 2000 entries (enough for all stocks with history)
+                    if len(stock_data) > 2000:
+                        stock_data[:] = stock_data[-2000:]
+                        embeddings_store[:] = embeddings_store[-2000:]
 
-                successful += 1
-                status = "📈" if change_percent > 0 else "📉" if change_percent < 0 else "➡️"
-                print(f"{status} {symbol:15} | ₹{current_price:8.2f} | {change_percent:+6.2f}% | Vol: {volume:>10,}")
+                    successful += 1
+                    status = "📈" if change_percent > 0 else "📉" if change_percent < 0 else "➡️"
+                    print(f"{status} {symbol:15} ₹{current_price:8.2f} ({change_percent:+6.2f}%) | Vol: {int(latest['Volume']):>12,}")
 
             except Exception as e:
                 failed += 1
-                print(f"❌ {symbol:15} ERROR: {str(e)[:45]}")
+                print(f"❌ {symbol:15} Error: {str(e)[:50]}")
 
         elapsed = time.time() - start_time
         print("-" * 70)
         print(f"✅ Fetch complete: {successful} success, {failed} failed | Time: {elapsed:.1f}s")
-        print(f"💾 Total entries: {len(stock_data)} | Embeddings: {len(embeddings_store)}")
-        print(f"⏳ Next update in 60 seconds...")
+        print(f"💾 Total data points: {len(stock_data)} | Embeddings: {len(embeddings_store)}")
+        print(f"⏳ Next update in 60 seconds...\n")
 
         time.sleep(60)
 
@@ -219,31 +162,10 @@ thread = threading.Thread(target=fetch_stocks, daemon=True)
 thread.start()
 print("✅ Background thread started\n")
 
-@app.route('/health', methods=['GET'])
-def health():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'online',
-        'message': 'Stock Market RAG Backend Running',
-        'stock_entries': len(stock_data),
-        'unique_stocks': len(set(s['symbol'] for s in stock_data)),
-        'total_stocks_tracked': len(STOCKS),
-        'embeddings': len(embeddings_store),
-        'timestamp': datetime.now().isoformat(),
-        'version': '2.0-production'
-    }), 200
-
 @app.route('/stocks', methods=['GET'])
 def get_stocks():
     """Get latest stock data"""
-    if not stock_data:
-        return jsonify({
-            'stocks': [],
-            'message': 'Data loading... (wait 60 seconds for first update)',
-            'timestamp': datetime.now().isoformat()
-        }), 200
-
-    # Get latest entry for each stock
+    # Return last entry for each stock
     latest_stocks = {}
     for s in reversed(stock_data):
         if s['symbol'] not in latest_stocks:
@@ -251,16 +173,23 @@ def get_stocks():
 
     return jsonify({
         'stocks': list(latest_stocks.values()),
-        'count': len(latest_stocks),
-        'timestamp': datetime.now().isoformat()
-    }), 200
+        'count': len(stock_data),
+        'unique_stocks': len(latest_stocks)
+    })
+
+@app.route('/stocks/sector/<sector>', methods=['GET'])
+def get_stocks_by_sector(sector):
+    """Get stocks filtered by sector"""
+    sector_stocks = [s for s in stock_data if s.get('sector', '').lower() == sector.lower()]
+    return jsonify({
+        'sector': sector,
+        'stocks': sector_stocks[-50:],
+        'count': len(sector_stocks)
+    })
 
 @app.route('/stocks/top-gainers', methods=['GET'])
 def top_gainers():
-    """Get top 5 gaining stocks"""
-    if not stock_data:
-        return jsonify({'gainers': [], 'message': 'No data yet'}), 200
-
+    """Get top gaining stocks"""
     latest_stocks = {}
     for s in reversed(stock_data):
         if s['symbol'] not in latest_stocks:
@@ -268,16 +197,13 @@ def top_gainers():
 
     sorted_stocks = sorted(latest_stocks.values(), key=lambda x: x['change_percent'], reverse=True)
     return jsonify({
-        'gainers': sorted_stocks[:5],
-        'timestamp': datetime.now().isoformat()
-    }), 200
+        'gainers': sorted_stocks[:10],
+        'count': len(sorted_stocks)
+    })
 
 @app.route('/stocks/top-losers', methods=['GET'])
 def top_losers():
-    """Get top 5 losing stocks"""
-    if not stock_data:
-        return jsonify({'losers': [], 'message': 'No data yet'}), 200
-
+    """Get top losing stocks"""
     latest_stocks = {}
     for s in reversed(stock_data):
         if s['symbol'] not in latest_stocks:
@@ -285,81 +211,199 @@ def top_losers():
 
     sorted_stocks = sorted(latest_stocks.values(), key=lambda x: x['change_percent'])
     return jsonify({
-        'losers': sorted_stocks[:5],
-        'timestamp': datetime.now().isoformat()
-    }), 200
+        'losers': sorted_stocks[:10],
+        'count': len(sorted_stocks)
+    })
+
+@app.route('/stocks/most-active', methods=['GET'])
+def most_active():
+    """Get most actively traded stocks by volume"""
+    latest_stocks = {}
+    for s in reversed(stock_data):
+        if s['symbol'] not in latest_stocks:
+            latest_stocks[s['symbol']] = s
+
+    sorted_stocks = sorted(latest_stocks.values(), key=lambda x: x['volume'], reverse=True)
+    return jsonify({
+        'most_active': sorted_stocks[:10],
+        'count': len(sorted_stocks)
+    })
+
+@app.route('/alerts', methods=['GET'])
+def get_alerts():
+    """Get high volatility alerts (>3% change)"""
+    alerts = []
+    seen_symbols = set()
+
+    for s in reversed(stock_data[-200:]):
+        if s['symbol'] not in seen_symbols and abs(s['change_percent']) > 3.0:
+            alerts.append({
+                'symbol': s['symbol'],
+                'sector': s.get('sector', 'Unknown'),
+                'price': s['price'],
+                'change_percent': s['change_percent'],
+                'alert_type': 'SURGE 🚀' if s['change_percent'] > 0 else 'DROP 📉',
+                'timestamp': s['timestamp'],
+                'message': f"⚠️ {s['symbol']} moved {s['change_percent']:.2f}% - High volatility!"
+            })
+            seen_symbols.add(s['symbol'])
+
+    return jsonify({
+        'alerts': alerts[:20],
+        'count': len(alerts)
+    })
+
+@app.route('/analytics', methods=['GET'])
+def get_analytics():
+    """Get comprehensive analytics"""
+    if not stock_data:
+        return jsonify({'analytics': [], 'message': 'No data yet'})
+
+    analytics = []
+    for symbol in STOCKS:
+        symbol_data = [s for s in stock_data[-100:] if s['symbol'] == symbol]
+        if symbol_data:
+            prices = [s['price'] for s in symbol_data]
+            analytics.append({
+                'symbol': symbol,
+                'sector': symbol_data[-1].get('sector', 'Unknown'),
+                'current_price': symbol_data[-1]['price'],
+                'avg_price': np.mean(prices),
+                'max_price': max(prices),
+                'min_price': min(prices),
+                'price_swing': max(prices) - min(prices),
+                'total_volume': sum(s['volume'] for s in symbol_data),
+                'avg_change_percent': np.mean([s['change_percent'] for s in symbol_data])
+            })
+
+    return jsonify({
+        'analytics': analytics,
+        'summary': {
+            'total_stocks': len(analytics),
+            'avg_market_change': np.mean([a['avg_change_percent'] for a in analytics])
+        }
+    })
 
 @app.route('/query', methods=['POST'])
 def query():
-    """AI-powered RAG query"""
-    if not stock_data or not embeddings_store:
-        return jsonify({
-            'answer': '⏳ Stock data still loading. Please wait 60 seconds for initial data fetch.',
-            'status': 'loading'
-        }), 200
-
+    """AI-powered RAG query endpoint"""
     question = request.json.get('question', '')
 
-    if not question:
-        return jsonify({'error': 'Question parameter required'}), 400
+    if not stock_data:
+        return jsonify({
+            'answer': '⏳ No stock data available yet. Please wait for data stream to initialize (takes ~60 seconds).',
+            'sources': [],
+            'timestamp': datetime.now().isoformat()
+        })
+
+    # Search similar documents using vector similarity
+    query_emb = embedder.encode(question)
+    similarities = [
+        np.dot(query_emb, emb) / (np.linalg.norm(query_emb) * np.linalg.norm(emb))
+        for emb in embeddings_store
+    ]
+
+    # Get top 10 most relevant stocks (more context for better answers)
+    top_10_idx = np.argsort(similarities)[-10:][::-1]
+    context = "\n\n".join([stock_data[i]['text'] for i in top_10_idx])
+    sources = list(set([stock_data[i]['symbol'] for i in top_10_idx]))
 
     try:
-        # Encode question
-        query_emb = embedder.encode(question)
-
-        # Calculate similarities
-        similarities = []
-        for emb in embeddings_store:
-            try:
-                sim = np.dot(query_emb, emb) / (np.linalg.norm(query_emb) * np.linalg.norm(emb) + 1e-10)
-                similarities.append(sim)
-            except:
-                similarities.append(0)
-
-        # Get top 5 relevant stocks
-        if similarities:
-            top_5_idx = np.argsort(similarities)[-5:][::-1]
-            context = "\n\n".join([stock_data[i]['text'] for i in top_5_idx if i < len(stock_data)])
-            sources = [stock_data[i]['symbol'] for i in top_5_idx if i < len(stock_data)]
-        else:
-            context = "No relevant stock data found"
-            sources = []
-
-        # Query Groq
         response = groq_client.chat.completions.create(
             model="mixtral-8x7b-32768",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert Indian stock market analyst. Provide concise, data-driven insights based on real-time NSE stock data."
+                    "content": f"""You are an expert Indian stock market analyst with access to real-time NSE/BSE data covering {len(STOCKS)} major stocks across all sectors.
+
+Provide specific, data-driven insights with:
+- Exact prices and percentages from the data
+- Sector-wise analysis when relevant
+- Comparative analysis across stocks
+- Risk considerations
+- Market trends
+
+Be concise but thorough. Use Indian Rupee (₹) for prices."""
                 },
                 {
                     "role": "user",
-                    "content": f"Real-time stock data:\n{context}\n\nQuestion: {question}"
+                    "content": f"""Real-time Stock Market Data (Top 10 Relevant):
+{context}
+
+Question: {question}
+
+Provide detailed analysis based on the real-time data above."""
                 }
             ],
             temperature=0.7,
-            max_tokens=512
+            max_tokens=1024
         )
 
         return jsonify({
             'answer': response.choices[0].message.content,
             'sources': sources,
-            'timestamp': datetime.now().isoformat()
-        }), 200
+            'sources_count': len(sources),
+            'timestamp': datetime.now().isoformat(),
+            'model': 'mixtral-8x7b-32768',
+            'total_stocks_analyzed': len(STOCKS)
+        })
 
     except Exception as e:
         return jsonify({
-            'error': f'Query failed: {str(e)}',
-            'answer': 'Sorry, unable to process query. Please try again.'
+            'answer': f'Groq API Error: {str(e)}. Check your API key in .env file.',
+            'sources': [],
+            'timestamp': datetime.now().isoformat()
         }), 500
+
+@app.route('/health', methods=['GET'])
+def health():
+    """Comprehensive health check"""
+    latest_stocks = {}
+    for s in reversed(stock_data):
+        if s['symbol'] not in latest_stocks:
+            latest_stocks[s['symbol']] = s
+
+    return jsonify({
+        'status': 'online',
+        'stock_count': len(stock_data),
+        'unique_stocks': len(latest_stocks),
+        'total_stocks_tracked': len(STOCKS),
+        'stocks_tracked': STOCKS,
+        'data_coverage': f"{len(latest_stocks)}/{len(STOCKS)} stocks active",
+        'embeddings_count': len(embeddings_store),
+        'timestamp': datetime.now().isoformat(),
+        'version': '2.0-production'
+    })
+
+@app.route('/sectors', methods=['GET'])
+def get_sectors():
+    """Get list of sectors with stock counts"""
+    sectors = {}
+    for s in stock_data:
+        sector = s.get('sector', 'Unknown')
+        if sector not in sectors:
+            sectors[sector] = []
+        if s['symbol'] not in [stock['symbol'] for stock in sectors[sector]]:
+            sectors[sector].append({
+                'symbol': s['symbol'],
+                'price': s['price'],
+                'change_percent': s['change_percent']
+            })
+
+    return jsonify({
+        'sectors': {k: len(v) for k, v in sectors.items()},
+        'details': sectors
+    })
 
 if __name__ == '__main__':
     print("=" * 70)
-    print("🚀 Production Indian Stock Market RAG Backend v2.0")
+    print("🚀 Production Indian Stock Market RAG Backend")
     print("=" * 70)
-    print(f"✅ Server: http://0.0.0.0:8080")
-    print(f"📊 Stocks: {len(STOCKS)} across 9 sectors")
-    print(f"⏳ First data in ~60 seconds")
+    print(f"✅ Server starting on http://localhost:8080")
+    print(f"📊 Tracking {len(STOCKS)} stocks across multiple sectors")
+    print(f"🏢 Sectors: Banking, IT, Energy, FMCG, Auto, Pharma, Telecom, Metals")
+    print(f"⏳ First data will arrive in ~60 seconds")
+    print(f"💾 Enhanced RAG with top-10 context retrieval")
     print("=" * 70)
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8080)), debug=False, threaded=True)
+    print("")
+    app.run(host='0.0.0.0', port=8080, debug=False, threaded=True)
