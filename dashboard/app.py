@@ -238,7 +238,9 @@ st.markdown("""
 
 # Backend health
 try:
-    health = requests.get("http://localhost:8080/health", timeout=2).json()
+    backend_url = os.getenv('BACKEND_URL', 'http://localhost:8080')
+    health = requests.get(f"{backend_url}/health", timeout=2).json()
+
     backend_status = "online"
     total_stocks = health.get('total_stocks_tracked', 0)
     stock_count = health.get('stock_count', 0)
@@ -285,7 +287,7 @@ with tab1:
         st.error("Backend offline. Start backend to see stocks.")
     else:
         try:
-            response = requests.get("http://localhost:8080/stocks", timeout=5)
+            response = requests.get("f{backend_url}/stocks", timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 stocks = data.get('stocks', [])
@@ -525,7 +527,7 @@ with tab2:
             with st.spinner("🧠 Analyzing..."):
                 try:
                     response = requests.post(
-                        "http://localhost:8080/query",
+                        "f{backend_url}/query",
                         json={"question": question},
                         timeout=30
                     )
@@ -548,8 +550,8 @@ with tab3:
     st.markdown("### 📈 Market Overview")
 
     try:
-        gainers_resp = requests.get("http://localhost:8080/stocks/top-gainers", timeout=5)
-        losers_resp = requests.get("http://localhost:8080/stocks/top-losers", timeout=5)
+        gainers_resp = requests.get("f{backend_url}/stocks/top-gainers", timeout=5)
+        losers_resp = requests.get("f{backend_url}/stocks/top-losers", timeout=5)
 
         col1, col2 = st.columns(2)
 
@@ -572,7 +574,7 @@ with tab4:
     st.markdown("### ⚠️ Volatility Alerts")
 
     try:
-        response = requests.get("http://localhost:8080/alerts", timeout=5)
+        response = requests.get("f{backend_url}/alerts", timeout=5)
         if response.status_code == 200:
             alerts = response.json().get('alerts', [])
 
