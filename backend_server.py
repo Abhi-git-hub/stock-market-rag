@@ -435,6 +435,7 @@ def get_stocks_by_sector(sector):
         'sector': sector,
         'stocks': sector_stocks[-50:],
         'count': len(sector_stocks)
+    })
 
 @app.route('/sectors', methods=['GET'])
 def get_sectors():
