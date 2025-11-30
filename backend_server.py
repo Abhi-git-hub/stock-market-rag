@@ -427,6 +427,34 @@ def get_analytics():
             'avg_market_change': np.mean([a['avg_change_percent'] for a in analytics])
         }
     })
+app.route('/stocks/sector/<sector>', methods=['GET'])
+def get_stocks_by_sector(sector):
+    """Get stocks filtered by sector"""
+    sector_stocks = [s for s in stock_data if s.get('sector', '').lower() == sector.lower()]
+    return jsonify({
+        'sector': sector,
+        'stocks': sector_stocks[-50:],
+        'count': len(sector_stocks)
+
+@app.route('/sectors', methods=['GET'])
+def get_sectors():
+    """Get list of sectors with stock counts"""
+    sectors = {}
+    for s in stock_data:
+        sector = s.get('sector', 'Unknown')
+        if sector not in sectors:
+            sectors[sector] = []
+        if s['symbol'] not in [stock['symbol'] for stock in sectors[sector]]:
+            sectors[sector].append({
+                'symbol': s['symbol'],
+                'price': s['price'],
+                'change_percent': s['change_percent']
+            })
+
+    return jsonify({
+        'sectors': {k: len(v) for k, v in sectors.items()},
+        'details': sectors
+    })
 
 @app.route('/query', methods=['POST'])
 def query():
