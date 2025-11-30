@@ -6,7 +6,7 @@ import plotly.express as px
 from datetime import datetime
 import numpy as np
 import os
-BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8080')
+BACKEND_URL = os.getenv('backend_url', 'http://localhost:8080')
 
 
 # Page configuration
