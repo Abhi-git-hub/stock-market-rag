@@ -1,4 +1,3 @@
-# connectors/indian_stock_connector.py (replace)
 import pathway as pw
 import requests
 import time
@@ -18,15 +17,15 @@ class IndianStockConnector(pw.io.python.ConnectorSubject):
         super().__init__()
         self.symbols = symbols
         self.interval = interval
-        # fallback to local backend if not provided
-        self.base_url = os.getenv('STOCK_API_URL', 'http://localhost:8080')
+        self.base_url = os.getenv('STOCK_API_URL')
         
     def run(self):
-        print(f"🚀 Starting stock stream for: {', '.join(self.symbols)} -> {self.base_url}")
+        print(f"🚀 Starting stock stream for: {', '.join(self.symbols)}")
         
         while True:
             for symbol in self.symbols:
                 try:
+                    # Fetch real-time data
                     response = requests.get(
                         f"{self.base_url}/stock?symbol={symbol}",
                         timeout=10
@@ -38,8 +37,10 @@ class IndianStockConnector(pw.io.python.ConnectorSubject):
                         if data.get('status') == 'success':
                             stock_data = data['data']
                             
+                            # Create rich text for RAG
                             text_content = self._create_rich_text(symbol, stock_data)
                             
+                            # Emit to Pathway pipeline
                             self.next(
                                 symbol=symbol,
                                 price=float(stock_data.get('current_price', 0)),
@@ -54,10 +55,6 @@ class IndianStockConnector(pw.io.python.ConnectorSubject):
                             )
                             
                             print(f"✅ {symbol}: ₹{stock_data.get('current_price')} ({stock_data.get('change_percent')}%)")
-                        else:
-                            print(f"⚠️ {symbol} API returned non-success: {data.get('message')}")
-                    else:
-                        print(f"⚠️ {symbol} fetch returned status {response.status_code}")
                         
                 except Exception as e:
                     print(f"❌ Error fetching {symbol}: {e}")
@@ -76,10 +73,22 @@ Volume: {data.get('volume', 'N/A')}
 Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """.strip()
 
+
 def create_stock_stream():
+    """Initialize stock streaming table"""
+    
+    # Top Indian stocks to monitor
     stocks = [
-        'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK',
-        'HINDUNILVR', 'BHARTIARTL', 'ITC', 'SBIN', 'LT'
+        'RELIANCE',    # Reliance Industries
+        'TCS',         # Tata Consultancy Services
+        'HDFCBANK',    # HDFC Bank
+        'INFY',        # Infosys
+        'ICICIBANK',   # ICICI Bank
+        'HINDUNILVR',  # Hindustan Unilever
+        'BHARTIARTL',  # Bharti Airtel
+        'ITC',         # ITC Limited
+        'SBIN',        # State Bank of India
+        'LT'           # Larsen & Toubro
     ]
     
     connector = IndianStockConnector(
@@ -87,6 +96,7 @@ def create_stock_stream():
         interval=int(os.getenv('UPDATE_INTERVAL', 60))
     )
     
+    # Create Pathway streaming table
     stock_table = pw.io.python.read(
         connector,
         schema=pw.schema_from_types(
