@@ -459,4 +459,5 @@ if __name__ == '__main__':
     print(f"⏳ First data in ~60 seconds")
     print("=" * 70)
     print()
+    port = int(os.getenv('PORT', 8080))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
