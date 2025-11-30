@@ -74,7 +74,7 @@ async def call_tool(name: str, arguments: dict):
 {result['answer']}
 
 Data Sources: {', '.join(result.get('sources', []))}
-Model: Groq {result.get('model', 'mixtral-8x7b')}
+Model: Groq {result.get('model', 'llama-3.3-70b-versatile')}
 Timestamp: {result.get('timestamp', '')}
 """
             )]
