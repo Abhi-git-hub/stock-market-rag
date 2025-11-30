@@ -272,7 +272,7 @@ with st.sidebar:
     st.divider()
 
     if backend_status == "online":
-        st.info("🤖 AI: Mixtral-8x7b")
+        st.info("🤖 AI: llama-3.3-70b-versatile")
         st.info("🔄 Update: Every 60s")
         st.info("💰 Cost: $0")
 
