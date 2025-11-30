@@ -553,8 +553,8 @@ with tab3:
     st.markdown("### 📈 Market Overview")
 
     try:
-        gainers_resp = requests.get("f{backend_url}/stocks/top-gainers", timeout=5)
-        losers_resp = requests.get("f{backend_url}/stocks/top-losers", timeout=5)
+        gainers_resp = requests.get(f"{backend_url}/stocks/top-gainers", timeout=5)
+        losers_resp = requests.get(f"{backend_url}/stocks/top-losers", timeout=5)
 
         col1, col2 = st.columns(2)
 
