@@ -373,6 +373,61 @@ def top_losers():
     sorted_stocks = sorted(latest.values(), key=lambda x: x['change_percent'])
     return jsonify({'losers': sorted_stocks[:5]}), 200
 
+@app.route('/alerts', methods=['GET'])
+def get_alerts():
+    """Get high volatility alerts (>3% change)"""
+    alerts = []
+    seen_symbols = set()
+
+    for s in reversed(stock_data[-200:]):
+        if s['symbol'] not in seen_symbols and abs(s['change_percent']) > 3.0:
+            alerts.append({
+                'symbol': s['symbol'],
+                'sector': s.get('sector', 'Unknown'),
+                'price': s['price'],
+                'change_percent': s['change_percent'],
+                'alert_type': 'SURGE 🚀' if s['change_percent'] > 0 else 'DROP 📉',
+                'timestamp': s['timestamp'],
+                'message': f"⚠️ {s['symbol']} moved {s['change_percent']:.2f}% - High volatility!"
+            })
+            seen_symbols.add(s['symbol'])
+
+    return jsonify({
+        'alerts': alerts[:20],
+        'count': len(alerts)
+    })
+
+@app.route('/analytics', methods=['GET'])
+def get_analytics():
+    """Get comprehensive analytics"""
+    if not stock_data:
+        return jsonify({'analytics': [], 'message': 'No data yet'})
+
+    analytics = []
+    for symbol in STOCKS:
+        symbol_data = [s for s in stock_data[-100:] if s['symbol'] == symbol]
+        if symbol_data:
+            prices = [s['price'] for s in symbol_data]
+            analytics.append({
+                'symbol': symbol,
+                'sector': symbol_data[-1].get('sector', 'Unknown'),
+                'current_price': symbol_data[-1]['price'],
+                'avg_price': np.mean(prices),
+                'max_price': max(prices),
+                'min_price': min(prices),
+                'price_swing': max(prices) - min(prices),
+                'total_volume': sum(s['volume'] for s in symbol_data),
+                'avg_change_percent': np.mean([s['change_percent'] for s in symbol_data])
+            })
+
+    return jsonify({
+        'analytics': analytics,
+        'summary': {
+            'total_stocks': len(analytics),
+            'avg_market_change': np.mean([a['avg_change_percent'] for a in analytics])
+        }
+    })
+
 @app.route('/query', methods=['POST'])
 def query():
     """Query endpoint with Groq failover to offline analysis"""
